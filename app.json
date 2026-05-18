@@ -1,0 +1,465 @@
+import { useState, useRef, useEffect } from "react";
+
+// ─── MOCK DATABASE ───────────────────────────────────────────────────────────
+const DRUG_DB = {
+  "dolo": { brand:"Dolo 650", salt:"Paracetamol 650mg", form:"Tablet", category:"Painkiller / Fever", banned:false, nsq:false, ja_name:"Paracetamol 650mg Tablets IP", ja_price:0.94, ja_unit:"10's for ₹9.38", branded_price:3.50, savings:73, uses:"Fever (bukhaar), headache (sir dard), body pain, mild pain after vaccination", sideeffects:"Generally safe. Overdose can harm liver. Do not exceed 4g/day.", warning:"", alternatives:["Generic Paracetamol (Cipla) – ₹1.20/tab","Jan Aushadhi Paracetamol 650mg – ₹0.94/tab"] },
+  "dolo650":{ brand:"Dolo 650", salt:"Paracetamol 650mg", form:"Tablet", category:"Painkiller / Fever", banned:false, nsq:false, ja_name:"Paracetamol 650mg Tablets IP", ja_price:0.94, ja_unit:"10's for ₹9.38", branded_price:3.50, savings:73, uses:"Fever (bukhaar), headache (sir dard), body pain, mild pain after vaccination", sideeffects:"Generally safe. Overdose can harm liver. Do not exceed 4g/day.", warning:"", alternatives:["Generic Paracetamol (Cipla) – ₹1.20/tab","Jan Aushadhi Paracetamol 650mg – ₹0.94/tab"] },
+  "paracetamol":{ brand:"Various (Crocin, Dolo, Calpol)", salt:"Paracetamol", form:"Tablet / Syrup / IV", category:"Painkiller / Antipyretic", banned:false, nsq:false, ja_name:"Paracetamol 500mg Tablets IP", ja_price:0.66, ja_unit:"10's for ₹6.57", branded_price:2.80, savings:76, uses:"Fever, mild-to-moderate pain, headache, toothache, post-vaccination fever in children", sideeffects:"Very safe at correct doses. High doses can cause liver damage.", warning:"", alternatives:["Jan Aushadhi Paracetamol 500mg – ₹0.66/tab","Generic (Dr. Reddy's) – ₹0.95/tab"] },
+  "crocin":{ brand:"Crocin 500", salt:"Paracetamol 500mg", form:"Tablet", category:"Painkiller / Fever", banned:false, nsq:false, ja_name:"Paracetamol 500mg Tablets IP", ja_price:0.66, ja_unit:"10's for ₹6.57", branded_price:2.40, savings:73, uses:"Fever and mild pain. One of India's most common OTC medicines.", sideeffects:"Safe at recommended doses.", warning:"", alternatives:["Jan Aushadhi Paracetamol 500mg – ₹0.66/tab","Calpol (GSK) – ₹1.20/tab"] },
+  "augmentin":{ brand:"Augmentin 625 Duo", salt:"Amoxycillin 500mg + Clavulanic Acid 125mg", form:"Tablet", category:"Antibiotic (Penicillin class)", banned:false, nsq:false, ja_name:"Amoxycillin 500mg + Potassium Clavulanate 125mg Tablets IP", ja_price:8.77, ja_unit:"6's for ₹52.60", branded_price:37.17, savings:76, uses:"Bacterial infections: ear, throat, chest, urinary tract, skin. Often prescribed post-surgery.", sideeffects:"Nausea, diarrhoea, rash. Avoid if allergic to penicillin.", warning:"Complete the full course. Stopping early causes antibiotic resistance.", alternatives:["Jan Aushadhi Amoxy-Clav 625 – ₹52.60/6 tabs","Advent 625 (Cipla) – ₹120/6 tabs","Moxikind-CV (Mankind) – ₹95/6 tabs"] },
+  "metformin":{ brand:"Glycomet 500 / Glucophage", salt:"Metformin Hydrochloride 500mg", form:"Tablet", category:"Antidiabetic (Biguanide)", banned:false, nsq:false, ja_name:"Metformin Hydrochloride Tablets IP 500mg", ja_price:0.62, ja_unit:"10's for ₹6.19", branded_price:3.20, savings:81, uses:"Type 2 diabetes — controls blood sugar by reducing glucose production in liver and improving insulin sensitivity.", sideeffects:"Nausea and stomach upset initially. Take with food to reduce this. Rarely causes lactic acidosis.", warning:"Do not take if kidney function is poor. Inform doctor before any surgery or CT scan with dye.", alternatives:["Jan Aushadhi Metformin 500mg – ₹0.62/tab","Generic (Cipla) – ₹0.90/tab"] },
+  "corex":{ brand:"Corex-D Cough Syrup", salt:"Codeine Phosphate + Chlorpheniramine + Phenylephrine", form:"Syrup", category:"Cough Suppressant", banned:true, nsq:false, ja_name:"", ja_price:0, ja_unit:"", branded_price:0, savings:0, uses:"Was used for cough suppression. Now banned for OTC sale.", sideeffects:"Codeine is habit-forming. Can cause respiratory depression.", warning:"BANNED: Codeine-based combinations banned by CDSCO for OTC sale. Prescription required in states where permitted.", alternatives:["Dextromethorphan-based syrup (Jan Aushadhi) – ₹15-25","Ascoril LS (non-codeine) – ₹85","Benadryl (non-codeine) – ₹65"] },
+  "nimesulide":{ brand:"Nimulid / Nise 100mg (adult)", salt:"Nimesulide 100mg", form:"Tablet", category:"NSAID / Anti-inflammatory", banned:true, nsq:false, ja_name:"Nimesulide Tablets 100mg", ja_price:0.62, ja_unit:"10's for ₹6.19", branded_price:4.50, savings:0, uses:"Pain and fever. BANNED for children under 12.", sideeffects:"Liver toxicity, GI bleeding. Banned for paediatric use globally.", warning:"BANNED for children under 12 years by CDSCO. Adults: use with caution, max 15 days.", alternatives:["Ibuprofen (for adults) – Jan Aushadhi ₹0.28/tab","Paracetamol (safer alternative) – Jan Aushadhi ₹0.66/tab"] },
+  "voveran":{ brand:"Voveran 50 SR (Novartis)", salt:"Diclofenac Sodium 50mg", form:"Tablet", category:"NSAID / Pain Reliever", banned:false, nsq:true, ja_name:"Diclofenac Gastro-Resistant Tablets IP 50mg", ja_price:0.52, ja_unit:"10's for ₹5.16", branded_price:8.50, savings:94, uses:"Pain relief, joint pain, back pain, post-operative pain, arthritis.", sideeffects:"Stomach irritation, GI bleeding risk. Take with food.", warning:"NSQ ALERT: Some batches flagged by CDSCO drug quality testing. Check batch number.", alternatives:["Jan Aushadhi Diclofenac 50mg – ₹0.52/tab","Generic Diclofenac (Cipla) – ₹1.20/tab"] },
+  "telmisartan":{ brand:"Telma 40 (Glenmark)", salt:"Telmisartan 40mg", form:"Tablet", category:"Antihypertensive (ARB)", banned:false, nsq:false, ja_name:"Telmisartan Tablets IP 40mg", ja_price:0.75, ja_unit:"10's for ₹11.25 (approx)", branded_price:7.10, savings:89, uses:"High blood pressure (BP). Also used in heart failure and diabetic kidney disease.", sideeffects:"Dizziness, headache, raised potassium. Do not stop suddenly.", warning:"Do not stop suddenly. Monitor BP regularly.", alternatives:["Jan Aushadhi Telmisartan 40mg – ₹0.75/tab","Generic (Cipla) – ₹1.50/tab"] },
+  "atorvastatin":{ brand:"Atorva 10 (Zydus)", salt:"Atorvastatin 10mg", form:"Tablet", category:"Statin (Cholesterol)", banned:false, nsq:false, ja_name:"Atorvastatin Tablets IP 10mg", ja_price:0.83, ja_unit:"10's for ₹8.25", branded_price:9.50, savings:91, uses:"High cholesterol. Reduces LDL ('bad cholesterol') and lowers risk of heart attack and stroke.", sideeffects:"Muscle pain (rarely severe), liver effects. Take at night for best effect.", warning:"Avoid grapefruit juice. Report muscle pain immediately.", alternatives:["Jan Aushadhi Atorvastatin 10mg – ₹0.83/tab","Lipitor generic (Pfizer off-patent) – ₹1.50/tab"] },
+};
+
+const FIRST_AID = {
+  "saanp":{ title:"🐍 Snake Bite", steps:["Shaant rahein — victim ko bilkul hilne mat dein. Panic se zeher tezi failta hai.","Kaate hue hisse ko dil ke NEECHE rakkhein. Gravity se zeher dheere failega.","Gehne, ghadi, aur tight kapde utaarein — sujan aane se pehle.","108 call karein ABHI. Seedha aspatal jaayein. Har minute mayne rakhta hai.","Agar safe ho to saanp ki photo lein — doctor ke liye helpful hogi."]  ,donts:["Naas (tourniquet) NAHI baandhen — tissue damage hota hai","Kaat ke choomna (cutting / sucking) NAHI — Hollywood myth hai","Traditional ilaaj / jhad phook NAHI — time waste hoga","Aspatal ke alawa kuch bhi mat dein"]  ,emergency:"108 (Ambulance) · 15400 (Snakebite Helpline)", color:"#7F1D1D", bg:"#FEF2F2" },
+  "jalna":{ title:"🔥 Burns / Jalna", steps:["Turant thanda paani chalayein 10-20 minute tak. Iske alawa kuch mat lagayein.","Jale hue kapde utaarein — lekin skin se chipke kapde mat kheechen.","Saaf kapde se dhaankein. Ice, makhan, toothpaste NAHI lagayein.","Bade jale ke liye (haath se bada, ya chehra/haath/private parts) → 108 call karein.","Chote (coin se chhota) aur halke jale ghar par treat ho sakte hain."]  ,donts:["Ice NAHI — frostbite hota hai","Makhan/tel NAHI — infection badhta hai","Toothpaste NAHI — infection badhta hai","Chhale mat phodein"]  ,emergency:"108 (Ambulance) — bade jale ke liye", color:"#7C2D12", bg:"#FFF7ED" },
+  "dube":{ title:"💧 Drowning / Doobna", steps:["Unhe paani se nikaalein — apni safety ka dhyan rakhen. Agar zaroorat ho, kuch pakad ke rescue karein.","Agar breathing nahi hai → CPR shuru karein ABHI (30 compressions + 2 breaths).","Warm aur dry rakhen — hypothermia ek alag khatra hai.","Seedha aspatal jaayein — bhale hi victim uthke baat kar raha ho. 'Dry drowning' 24 hours baad ho sakti hai.","108 call karein rescue ke saath saath."]  ,donts:["Unhe ulta mat paltaayein — paani nikaalne ke liye (koi faayda nahi, CPR rokta hai)","CPR mein kami mat karein","Recovery ke baad bhi monitoring zaroori hai"]  ,emergency:"108 (Ambulance) — always, even if person seems fine", color:"#1E3A5F", bg:"#EFF6FF" },
+  "cpr":{ title:"❤️ CPR — Heart Attack / Unconscious", steps:["Scene safe? Victim ko shake karein: 'Kya aap theek hain?' Agar jawab nahi → shout for help + 108 call karein.","Unhe seedha letaayein (flat surface). Sar thoda peeche jhukayein.","Haath ki hatheli seene ke beech rakhen. Seedhi baahen. 30 baar TEZI se dabaayein (2-3 inch gehraai, 100-120/min rate — 'Stayin' Alive' song ki speed).","2 rescue breaths dein: naak bandh karein, mooh se air daalein, seena uthna chahiye.","30:2 pattern jaarid rakhein jab tak ambulance aaye ya victim saans le."]  ,donts:["Roken mat — thakaan hogi lekin jaari rakhein","Rescue breaths chhod bhi sakte hain (compression-only CPR acceptable)","AED available ho to turant use karein"]  ,emergency:"108 (Ambulance) — call karein CPR se pehle ya kisi doosre ko karwayein", color:"#7F1D1D", bg:"#FFF1F2" },
+  "rabies":{ title:"🐕 Dog / Animal Bite — Rabies", steps:["Immediately: wound ko saabun + paani se 15 minute tak dhoyen. Yeh sabse zaroori step hai.","Antiseptic (Betadine / Dettol) lagayein wound par.","AASU NAHI BAHAYEN — Rabies 100% fatal hai agar vaccine na lein. Doctor ke paas AABHI jaayein.","Doctor vaccine schedule batayenge: Day 0, 3, 7, 14, 28 — fifth injection bhi leni hogi.","Agar kutta awara tha ya behavior abnormal tha → Anti-Rabies Serum (ARS) bhi required ho sakti hai."]  ,donts:["Wound stitching immediately mat karwayein — infection badh sakta hai","Vaccine course incomplete mat chhodein — partial course kaam nahi karta","Wait mat karein — delay se risk badhta hai"]  ,emergency:"15400 (Rabies Helpline) · Nearest PHC / Govt Hospital", color:"#4A1942", bg:"#FDF4FF" },
+};
+
+const QUICK_QUERIES = [
+  "Dolo 650 kya hai?","Augmentin 625 sasta option?","Corex cough syrup safe hai?",
+  "Saanp ne kaata! Kya karein?","Metformin 500 batao","Voveran 50 SR kharidna chahiye?",
+  "CPR kaise karein?","Telmisartan 40 Jan Aushadhi mein hai?","Dog ne kaata, kya karein?",
+];
+
+// ─── INTELLIGENCE ENGINE ─────────────────────────────────────────────────────
+function processQuery(q) {
+  const ql = q.toLowerCase().replace(/[?!।]/g,"").trim();
+  // First aid detection
+  const faKeys = { saanp:["saanp","snake","nag"], jalna:["jalna","burn","aag","jalana"], dube:["doob","drown","pani mein"], cpr:["cpr","dil","heart attack","behosh","unconscious","cardiac"], rabies:["kutta","dog","bite","rabies","janwar","animal"] };
+  for (const [k,words] of Object.entries(faKeys)) {
+    if (words.some(w=>ql.includes(w))) return { type:"firstaid", data:FIRST_AID[k] };
+  }
+  // Drug detection
+  const drugKeys = Object.keys(DRUG_DB);
+  const found = drugKeys.find(k=>ql.includes(k.replace(/\d/g,"").substring(0,5)) || ql.includes(k));
+  if (found) return { type:"drug", data:DRUG_DB[found] };
+  // Partial match
+  const partial = drugKeys.find(k => { const words = ql.split(" "); return words.some(w=>w.length>3 && k.startsWith(w.substring(0,4))); });
+  if (partial) return { type:"drug", data:DRUG_DB[partial] };
+  return { type:"unknown" };
+}
+
+function buildResponse(result, query) {
+  if (result.type==="unknown") return { type:"unknown", text:`Yeh medicine "${query}" abhi hamare database mein nahi hai.\n\nKya aap correct spelling ke saath dobara try karein? Ya koi popular brand name batayein (e.g. "Dolo 650", "Augmentin 625", "Metformin").` };
+  if (result.type==="firstaid") return { type:"firstaid", data:result.data };
+  const d = result.data;
+  if (d.banned) return { type:"banned", data:d };
+  if (d.nsq) return { type:"nsq", data:d };
+  return { type:"drug", data:d };
+}
+
+// ─── COMPONENTS ──────────────────────────────────────────────────────────────
+function AlertBadge({ level }) {
+  const cfg = { green:{ bg:"#D1FAE5",c:"#065F46",t:"✓ Safe" }, yellow:{ bg:"#FEF3C7",c:"#92400E",t:"⚠ Caution" }, red:{ bg:"#FEE2E2",c:"#991B1B",t:"✗ Banned" } }[level];
+  return <span style={{ fontSize:11, padding:"2px 8px", borderRadius:12, background:cfg.bg, color:cfg.c, fontWeight:600, letterSpacing:"0.03em" }}>{cfg.t}</span>;
+}
+
+function SavingsBar({ savings }) {
+  return (
+    <div>
+      <div style={{ display:"flex", justifyContent:"space-between", marginBottom:4 }}>
+        <span style={{ fontSize:11, color:"#6B7280" }}>Branded</span>
+        <span style={{ fontSize:11, fontWeight:600, color:"#059669" }}>You save {savings}%</span>
+        <span style={{ fontSize:11, color:"#6B7280" }}>Jan Aushadhi</span>
+      </div>
+      <div style={{ height:6, background:"#E5E7EB", borderRadius:3, overflow:"hidden" }}>
+        <div style={{ height:"100%", width:`${savings}%`, background:"linear-gradient(90deg,#F59E0B,#10B981)", borderRadius:3, transition:"width 1s ease" }}/>
+      </div>
+    </div>
+  );
+}
+
+function DrugCard({ data }) {
+  return (
+    <div style={{ animation:"slideUp 0.3s ease" }}>
+      {/* Header */}
+      <div style={{ background:"linear-gradient(135deg,#1E3A5F 0%,#0F2340 100%)", borderRadius:"14px 14px 0 0", padding:"16px 18px", color:"white" }}>
+        <div style={{ display:"flex", justifyContent:"space-between", alignItems:"flex-start" }}>
+          <div>
+            <div style={{ fontSize:10, opacity:0.6, letterSpacing:"0.1em", textTransform:"uppercase", marginBottom:4 }}>{data.category}</div>
+            <div style={{ fontSize:18, fontWeight:700 }}>{data.brand}</div>
+            <div style={{ fontSize:12, opacity:0.75, marginTop:2 }}>{data.salt}</div>
+          </div>
+          <AlertBadge level="green"/>
+        </div>
+      </div>
+      {/* Body */}
+      <div style={{ background:"white", borderRadius:"0 0 14px 14px", border:"1px solid #E5E7EB", borderTop:"none" }}>
+        {/* Uses */}
+        <div style={{ padding:"14px 18px", borderBottom:"1px solid #F3F4F6" }}>
+          <div style={{ fontSize:10, fontWeight:700, color:"#6B7280", textTransform:"uppercase", letterSpacing:"0.08em", marginBottom:6 }}>Kya kaam aata hai</div>
+          <p style={{ fontSize:13, color:"#374151", lineHeight:1.7, margin:0 }}>{data.uses}</p>
+        </div>
+        {/* Jan Aushadhi */}
+        {data.ja_name && (
+          <div style={{ padding:"14px 18px", borderBottom:"1px solid #F3F4F6", background:"#F0FDF4" }}>
+            <div style={{ fontSize:10, fontWeight:700, color:"#065F46", textTransform:"uppercase", letterSpacing:"0.08em", marginBottom:8 }}>✅ Jan Aushadhi Sasta Option</div>
+            <div style={{ display:"flex", justifyContent:"space-between", alignItems:"center", marginBottom:10 }}>
+              <div>
+                <div style={{ fontSize:13, fontWeight:600, color:"#065F46" }}>{data.ja_name}</div>
+                <div style={{ fontSize:11, color:"#6B7280" }}>{data.ja_unit}</div>
+              </div>
+              <div style={{ textAlign:"right" }}>
+                <div style={{ fontSize:20, fontWeight:800, color:"#059669" }}>₹{data.ja_price}<span style={{ fontSize:12, fontWeight:400 }}>/tab</span></div>
+                <div style={{ fontSize:11, color:"#9CA3AF", textDecoration:"line-through" }}>Branded ₹{data.branded_price}/tab</div>
+              </div>
+            </div>
+            <SavingsBar savings={data.savings}/>
+          </div>
+        )}
+        {/* Alternatives */}
+        <div style={{ padding:"14px 18px", borderBottom:"1px solid #F3F4F6" }}>
+          <div style={{ fontSize:10, fontWeight:700, color:"#6B7280", textTransform:"uppercase", letterSpacing:"0.08em", marginBottom:8 }}>Aur Saste Brands</div>
+          {data.alternatives.map((a,i)=>(
+            <div key={i} style={{ display:"flex", alignItems:"center", gap:8, marginBottom:6 }}>
+              <div style={{ width:6, height:6, borderRadius:"50%", background:"#D97706", flexShrink:0 }}/>
+              <span style={{ fontSize:13, color:"#374151" }}>{a}</span>
+            </div>
+          ))}
+        </div>
+        {/* Warning */}
+        {data.sideeffects && (
+          <div style={{ padding:"14px 18px", borderBottom:"1px solid #F3F4F6", background:"#FFFBEB" }}>
+            <div style={{ fontSize:10, fontWeight:700, color:"#92400E", textTransform:"uppercase", letterSpacing:"0.08em", marginBottom:6 }}>⚠️ Side Effects / Savdhani</div>
+            <p style={{ fontSize:13, color:"#78350F", margin:0, lineHeight:1.7 }}>{data.sideeffects}</p>
+            {data.warning && <p style={{ fontSize:13, color:"#DC2626", margin:"8px 0 0", lineHeight:1.7, fontWeight:600 }}>{data.warning}</p>}
+          </div>
+        )}
+        {/* Disclaimer */}
+        <div style={{ padding:"12px 18px", background:"#F9FAFB", borderRadius:"0 0 14px 14px" }}>
+          <p style={{ fontSize:11, color:"#9CA3AF", margin:0, lineHeight:1.7 }}>🔒 <strong>Saavdhani:</strong> Yeh sirf jaankari hai. Dose aur frequency ke liye apne doctor ya pharmacist se zaroor poochhen. Substitute sirf tab safe hai jab salt + mg + form (tablet/syrup) bilkul same hon.</p>
+        </div>
+      </div>
+    </div>
+  );
+}
+
+function BannedCard({ data }) {
+  return (
+    <div style={{ animation:"slideUp 0.3s ease" }}>
+      <div style={{ background:"linear-gradient(135deg,#7F1D1D 0%,#991B1B 100%)", borderRadius:"14px 14px 0 0", padding:"16px 18px", color:"white" }}>
+        <div style={{ fontSize:11, opacity:0.7, letterSpacing:"0.08em", textTransform:"uppercase", marginBottom:4 }}>🚨 Safety Alert</div>
+        <div style={{ fontSize:20, fontWeight:800 }}>BANNED / RESTRICTED</div>
+        <div style={{ fontSize:14, marginTop:4, opacity:0.85 }}>{data.brand}</div>
+      </div>
+      <div style={{ background:"white", border:"2px solid #FCA5A5", borderTop:"none", borderRadius:"0 0 14px 14px" }}>
+        <div style={{ padding:"16px 18px", background:"#FEF2F2", borderBottom:"1px solid #FCA5A5" }}>
+          <p style={{ fontSize:14, color:"#7F1D1D", margin:0, fontWeight:600, lineHeight:1.7 }}>{data.warning}</p>
+        </div>
+        <div style={{ padding:"14px 18px", borderBottom:"1px solid #F3F4F6" }}>
+          <div style={{ fontSize:10, fontWeight:700, color:"#6B7280", textTransform:"uppercase", marginBottom:8 }}>Safer Alternatives</div>
+          {data.alternatives.map((a,i)=>(
+            <div key={i} style={{ display:"flex", gap:8, alignItems:"center", marginBottom:6 }}>
+              <div style={{ width:6, height:6, borderRadius:"50%", background:"#10B981", flexShrink:0 }}/>
+              <span style={{ fontSize:13, color:"#374151" }}>{a}</span>
+            </div>
+          ))}
+        </div>
+        <div style={{ padding:"12px 18px", background:"#F9FAFB", borderRadius:"0 0 12px 12px" }}>
+          <p style={{ fontSize:11, color:"#9CA3AF", margin:0 }}>Doctor se safer alternative ke baare mein baat karein. Yeh medicine kisi bhi Jan Aushadhi store ya pharmacy se purchase na karein jab tak doctor ne specifically recommend na kiya ho.</p>
+        </div>
+      </div>
+    </div>
+  );
+}
+
+function NSQCard({ data }) {
+  return (
+    <div style={{ animation:"slideUp 0.3s ease" }}>
+      <div style={{ background:"linear-gradient(135deg,#78350F 0%,#92400E 100%)", borderRadius:"14px 14px 0 0", padding:"16px 18px", color:"white" }}>
+        <div style={{ fontSize:11, opacity:0.7, letterSpacing:"0.08em", textTransform:"uppercase", marginBottom:4 }}>⚠️ Quality Alert</div>
+        <div style={{ fontSize:18, fontWeight:700 }}>NSQ — Not of Standard Quality</div>
+        <div style={{ fontSize:13, marginTop:4, opacity:0.8 }}>{data.brand} · {data.salt}</div>
+      </div>
+      <div style={{ background:"white", border:"2px solid #FDE68A", borderTop:"none", borderRadius:"0 0 14px 14px" }}>
+        <div style={{ padding:"14px 18px", background:"#FFFBEB", borderBottom:"1px solid #FDE68A" }}>
+          <p style={{ fontSize:14, color:"#92400E", fontWeight:600, margin:0 }}>{data.warning}</p>
+        </div>
+        <DrugCard data={{ ...data, nsq:false, ja_name:data.ja_name, warning:"" }}/>
+      </div>
+    </div>
+  );
+}
+
+function FirstAidCard({ data }) {
+  const [step, setStep] = useState(0);
+  return (
+    <div style={{ animation:"slideUp 0.3s ease" }}>
+      <div style={{ background:data.color, borderRadius:"14px 14px 0 0", padding:"16px 18px", color:"white" }}>
+        <div style={{ fontSize:11, opacity:0.7, textTransform:"uppercase", letterSpacing:"0.08em", marginBottom:4 }}>🏥 Emergency First Aid</div>
+        <div style={{ fontSize:20, fontWeight:800 }}>{data.title}</div>
+      </div>
+      <div style={{ background:"white", border:"1px solid #E5E7EB", borderTop:"none", borderRadius:"0 0 14px 14px" }}>
+        {/* Steps */}
+        <div style={{ padding:"14px 18px", borderBottom:"1px solid #F3F4F6" }}>
+          <div style={{ fontSize:10, fontWeight:700, color:"#6B7280", textTransform:"uppercase", letterSpacing:"0.08em", marginBottom:12 }}>Step-by-step kya karein</div>
+          {data.steps.map((s,i)=>(
+            <div key={i} onClick={()=>setStep(i)} style={{ display:"flex", gap:12, marginBottom:10, cursor:"pointer", opacity:step===i?1:0.6, transition:"opacity 0.2s" }}>
+              <div style={{ width:24, height:24, borderRadius:"50%", background:step===i?data.color:"#E5E7EB", color:step===i?"white":"#6B7280", display:"flex", alignItems:"center", justifyContent:"center", fontSize:11, fontWeight:700, flexShrink:0, transition:"all 0.2s" }}>{i+1}</div>
+              <p style={{ fontSize:13, color:"#1F2937", margin:0, lineHeight:1.7, fontWeight:step===i?600:400 }}>{s}</p>
+            </div>
+          ))}
+        </div>
+        {/* Don'ts */}
+        <div style={{ padding:"14px 18px", borderBottom:"1px solid #F3F4F6", background:"#FEF2F2" }}>
+          <div style={{ fontSize:10, fontWeight:700, color:"#991B1B", textTransform:"uppercase", letterSpacing:"0.08em", marginBottom:8 }}>❌ Bilkul mat karein</div>
+          {data.donts.map((d,i)=>(
+            <div key={i} style={{ display:"flex", gap:8, marginBottom:6, alignItems:"flex-start" }}>
+              <span style={{ color:"#DC2626", flexShrink:0, fontWeight:700 }}>✗</span>
+              <span style={{ fontSize:13, color:"#7F1D1D" }}>{d}</span>
+            </div>
+          ))}
+        </div>
+        {/* Emergency */}
+        <div style={{ padding:"14px 18px", background:data.bg, borderRadius:"0 0 14px 14px" }}>
+          <div style={{ fontSize:10, fontWeight:700, color:data.color, textTransform:"uppercase", letterSpacing:"0.08em", marginBottom:6 }}>📞 Emergency Numbers</div>
+          <p style={{ fontSize:14, fontWeight:700, color:data.color, margin:0 }}>{data.emergency}</p>
+        </div>
+      </div>
+    </div>
+  );
+}
+
+function UnknownCard({ text }) {
+  return (
+    <div style={{ background:"white", border:"1px solid #E5E7EB", borderRadius:14, padding:"18px", animation:"slideUp 0.3s ease" }}>
+      <div style={{ fontSize:24, marginBottom:8 }}>🔍</div>
+      <p style={{ fontSize:14, color:"#374151", lineHeight:1.8, margin:0, whiteSpace:"pre-line" }}>{text}</p>
+    </div>
+  );
+}
+
+function TypingDots() {
+  return (
+    <div style={{ display:"flex", gap:4, padding:"12px 16px", background:"#F3F4F6", borderRadius:"0 14px 14px 14px", width:"fit-content" }}>
+      {[0,1,2].map(i=>(
+        <div key={i} style={{ width:8, height:8, borderRadius:"50%", background:"#9CA3AF", animation:`bounce 1.2s ease-in-out ${i*0.2}s infinite` }}/>
+      ))}
+    </div>
+  );
+}
+
+// ─── MAIN APP ─────────────────────────────────────────────────────────────────
+export default function MedSaathi() {
+  const [messages, setMessages] = useState([]);
+  const [input, setInput] = useState("");
+  const [loading, setLoading] = useState(false);
+  const [activeTab, setActiveTab] = useState("chat");
+  const [lang, setLang] = useState("HI");
+  const [offlineMode, setOfflineMode] = useState(true);
+  const bottomRef = useRef(null);
+  const inputRef = useRef(null);
+
+  useEffect(() => {
+    // Welcome message
+    setTimeout(() => {
+      setMessages([{
+        id:1, role:"assistant", type:"welcome",
+        text:"Namaste! 🙏 Main MedSaathi hoon — aapka medicine saathi.\n\nMujhse poochhen:\n• Koi bhi medicine kya kaam karti hai\n• Jan Aushadhi mein sasta option kya hai\n• Koi medicine banned hai ya nahi\n• Emergency first aid (saanp, jalna, cpr, dog bite...)\n\nHindi, English, ya Hinglish — jo comfortable ho!"
+      }]);
+    }, 400);
+  }, []);
+
+  useEffect(() => {
+    bottomRef.current?.scrollIntoView({ behavior:"smooth" });
+  }, [messages, loading]);
+
+  const send = (text) => {
+    const q = (text || input).trim();
+    if (!q) return;
+    setInput("");
+    const userMsg = { id:Date.now(), role:"user", text:q };
+    setMessages(prev=>[...prev, userMsg]);
+    setLoading(true);
+    setTimeout(() => {
+      const result = processQuery(q);
+      const response = buildResponse(result, q);
+      setMessages(prev=>[...prev, { id:Date.now()+1, role:"assistant", ...response }]);
+      setLoading(false);
+    }, 900 + Math.random()*400);
+  };
+
+  const renderAssistantMessage = (msg) => {
+    if (msg.type==="welcome") return <div style={{ fontSize:14, color:"#374151", lineHeight:1.9, whiteSpace:"pre-line" }}>{msg.text}</div>;
+    if (msg.type==="drug") return <DrugCard data={msg.data}/>;
+    if (msg.type==="banned") return <BannedCard data={msg.data}/>;
+    if (msg.type==="nsq") return <NSQCard data={msg.data}/>;
+    if (msg.type==="firstaid") return <FirstAidCard data={msg.data}/>;
+    if (msg.type==="unknown") return <UnknownCard text={msg.text}/>;
+    return null;
+  };
+
+  return (
+    <div style={{ fontFamily:"'DM Sans', system-ui, sans-serif", background:"#F8FAFC", minHeight:"100vh", display:"flex", flexDirection:"column", maxWidth:520, margin:"0 auto" }}>
+      <style>{`
+        @import url('https://fonts.googleapis.com/css2?family=DM+Sans:wght@400;500;600;700;800&display=swap');
+        @keyframes slideUp { from { opacity:0; transform:translateY(10px); } to { opacity:1; transform:translateY(0); } }
+        @keyframes bounce { 0%,80%,100% { transform:translateY(0); } 40% { transform:translateY(-8px); } }
+        @keyframes pulse { 0%,100% { opacity:1; } 50% { opacity:0.5; } }
+        * { box-sizing:border-box; }
+        ::-webkit-scrollbar { width:4px; }
+        ::-webkit-scrollbar-track { background:transparent; }
+        ::-webkit-scrollbar-thumb { background:#D1D5DB; border-radius:2px; }
+      `}</style>
+
+      {/* ── HEADER ── */}
+      <div style={{ background:"linear-gradient(135deg,#1E3A5F 0%,#0F2340 100%)", padding:"14px 16px 0", position:"sticky", top:0, zIndex:50 }}>
+        {/* Top bar */}
+        <div style={{ display:"flex", alignItems:"center", justifyContent:"space-between", marginBottom:12 }}>
+          <div style={{ display:"flex", alignItems:"center", gap:10 }}>
+            <div style={{ width:38, height:38, borderRadius:12, background:"linear-gradient(135deg,#F59E0B,#D97706)", display:"flex", alignItems:"center", justifyContent:"center", fontSize:20 }}>🏥</div>
+            <div>
+              <div style={{ color:"white", fontWeight:800, fontSize:18, letterSpacing:"-0.02em" }}>MedSaathi</div>
+              <div style={{ color:"rgba(255,255,255,0.5)", fontSize:11 }}>Aapka Medicine Companion</div>
+            </div>
+          </div>
+          <div style={{ display:"flex", gap:8, alignItems:"center" }}>
+            {/* Offline badge */}
+            <div onClick={()=>setOfflineMode(!offlineMode)} style={{ display:"flex", alignItems:"center", gap:5, background:offlineMode?"rgba(16,185,129,0.2)":"rgba(239,68,68,0.2)", border:`1px solid ${offlineMode?"rgba(16,185,129,0.4)":"rgba(239,68,68,0.4)"}`, borderRadius:20, padding:"3px 10px", cursor:"pointer" }}>
+              <div style={{ width:6, height:6, borderRadius:"50%", background:offlineMode?"#10B981":"#EF4444", animation:"pulse 2s infinite" }}/>
+              <span style={{ fontSize:10, color:offlineMode?"#6EE7B7":"#FCA5A5", fontWeight:600 }}>{offlineMode?"OFFLINE":"ONLINE"}</span>
+            </div>
+            {/* Language */}
+            <div onClick={()=>setLang(l=>l==="HI"?"EN":l==="EN"?"TE":"HI")} style={{ background:"rgba(255,255,255,0.1)", borderRadius:20, padding:"3px 12px", cursor:"pointer" }}>
+              <span style={{ fontSize:11, color:"rgba(255,255,255,0.8)", fontWeight:600 }}>{lang}</span>
+            </div>
+          </div>
+        </div>
+        {/* Tabs */}
+        <div style={{ display:"flex", gap:0 }}>
+          {[["chat","💬 Chat"],["firstaid","🚨 First Aid"],["jastore","🏪 JA Store"]].map(([id,label])=>(
+            <button key={id} onClick={()=>setActiveTab(id)} style={{ flex:1, background:"transparent", border:"none", padding:"8px 0", cursor:"pointer", borderBottom:`2px solid ${activeTab===id?"#F59E0B":"transparent"}`, color:activeTab===id?"#F59E0B":"rgba(255,255,255,0.5)", fontSize:12, fontWeight:activeTab===id?700:400, transition:"all 0.2s", fontFamily:"inherit" }}>{label}</button>
+          ))}
+        </div>
+      </div>
+
+      {/* ── CHAT TAB ── */}
+      {activeTab==="chat" && (
+        <>
+          {/* Messages */}
+          <div style={{ flex:1, overflowY:"auto", padding:"16px", display:"flex", flexDirection:"column", gap:12, minHeight:400 }}>
+            {messages.map(msg=>(
+              <div key={msg.id} style={{ display:"flex", flexDirection:"column", alignItems:msg.role==="user"?"flex-end":"flex-start", gap:4 }}>
+                {msg.role==="user" ? (
+                  <div style={{ background:"linear-gradient(135deg,#1E3A5F,#2563EB)", color:"white", borderRadius:"14px 14px 0 14px", padding:"10px 14px", maxWidth:"85%", fontSize:14, lineHeight:1.6, boxShadow:"0 2px 8px rgba(30,58,95,0.3)" }}>{msg.text}</div>
+                ) : (
+                  <div style={{ maxWidth:"95%", width:"100%" }}>
+                    {renderAssistantMessage(msg)}
+                  </div>
+                )}
+              </div>
+            ))}
+            {loading && (
+              <div style={{ display:"flex", flexDirection:"column", alignItems:"flex-start" }}>
+                <div style={{ fontSize:10, color:"#9CA3AF", marginBottom:4, marginLeft:4 }}>MedSaathi soch raha hai...</div>
+                <TypingDots/>
+              </div>
+            )}
+            <div ref={bottomRef}/>
+          </div>
+
+          {/* Quick queries */}
+          {messages.length <= 1 && (
+            <div style={{ padding:"0 16px 12px", overflowX:"auto" }}>
+              <div style={{ fontSize:11, color:"#9CA3AF", marginBottom:8, fontWeight:600, letterSpacing:"0.05em" }}>POPULAR QUERIES</div>
+              <div style={{ display:"flex", gap:8, flexWrap:"wrap" }}>
+                {QUICK_QUERIES.map((q,i)=>(
+                  <button key={i} onClick={()=>send(q)} style={{ background:"white", border:"1px solid #E5E7EB", borderRadius:20, padding:"5px 12px", fontSize:12, color:"#374151", cursor:"pointer", whiteSpace:"nowrap", fontFamily:"inherit", transition:"all 0.15s" }} onMouseEnter={e=>{ e.target.style.background="#EFF6FF"; e.target.style.borderColor="#93C5FD"; }} onMouseLeave={e=>{ e.target.style.background="white"; e.target.style.borderColor="#E5E7EB"; }}>{q}</button>
+                ))}
+              </div>
+            </div>
+          )}
+
+          {/* Input */}
+          <div style={{ padding:"12px 16px", background:"white", borderTop:"1px solid #F3F4F6", display:"flex", gap:10, alignItems:"flex-end" }}>
+            <div style={{ flex:1, background:"#F9FAFB", border:"1px solid #E5E7EB", borderRadius:14, padding:"10px 14px", display:"flex", alignItems:"center", gap:8 }}>
+              <input ref={inputRef} value={input} onChange={e=>setInput(e.target.value)} onKeyDown={e=>e.key==="Enter"&&!e.shiftKey&&(e.preventDefault(),send())} placeholder="Medicine ka naam ya sawaal..." style={{ flex:1, background:"transparent", border:"none", outline:"none", fontSize:14, color:"#1F2937", fontFamily:"inherit" }}/>
+              {/* Camera icon */}
+              <button title="Prescription photo upload" style={{ background:"transparent", border:"none", cursor:"pointer", fontSize:18, opacity:0.5, padding:0 }}>📷</button>
+              {/* Mic icon */}
+              <button title="Voice query" style={{ background:"transparent", border:"none", cursor:"pointer", fontSize:18, opacity:0.5, padding:0 }}>🎤</button>
+            </div>
+            <button onClick={()=>send()} disabled={!input.trim()||loading} style={{ width:44, height:44, borderRadius:12, background:input.trim()&&!loading?"linear-gradient(135deg,#F59E0B,#D97706)":"#E5E7EB", border:"none", cursor:input.trim()&&!loading?"pointer":"default", display:"flex", alignItems:"center", justifyContent:"center", fontSize:20, transition:"all 0.2s", flexShrink:0 }}>
+              {loading?"⏳":"→"}
+            </button>
+          </div>
+        </>
+      )}
+
+      {/* ── FIRST AID TAB ── */}
+      {activeTab==="firstaid" && (
+        <div style={{ padding:16, display:"flex", flexDirection:"column", gap:12 }}>
+          <div style={{ fontSize:12, color:"#6B7280", fontWeight:600, letterSpacing:"0.05em" }}>EMERGENCY FIRST AID — OFFLINE AVAILABLE</div>
+          {Object.entries(FIRST_AID).map(([key,fa])=>(
+            <div key={key} onClick={()=>{ setActiveTab("chat"); setTimeout(()=>{ send(key==="saanp"?"saanp ne kaata":key==="jalna"?"jal gaya":key==="dube"?"doob gaya":key==="cpr"?"CPR":"kutta ne kaata"); },100); }} style={{ background:"white", border:"1px solid #E5E7EB", borderRadius:14, padding:"14px 16px", cursor:"pointer", display:"flex", alignItems:"center", gap:12, transition:"all 0.15s" }} onMouseEnter={e=>e.currentTarget.style.borderColor=fa.color} onMouseLeave={e=>e.currentTarget.style.borderColor="#E5E7EB"}>
+              <div style={{ width:44, height:44, borderRadius:12, background:fa.bg, display:"flex", alignItems:"center", justifyContent:"center", fontSize:22, flexShrink:0 }}>{fa.title.substring(0,2)}</div>
+              <div>
+                <div style={{ fontSize:14, fontWeight:700, color:"#1F2937" }}>{fa.title}</div>
+                <div style={{ fontSize:12, color:"#6B7280", marginTop:2 }}>{fa.steps.length} steps · Emergency: {fa.emergency.split("·")[0]}</div>
+              </div>
+              <div style={{ marginLeft:"auto", color:"#9CA3AF", fontSize:18 }}>›</div>
+            </div>
+          ))}
+          <div style={{ background:"#FEF2F2", borderRadius:12, padding:"12px 14px", border:"1px solid #FCA5A5" }}>
+            <p style={{ fontSize:12, color:"#7F1D1D", margin:0, lineHeight:1.7 }}>🚨 <strong>Emergency numbers:</strong> 108 (Ambulance) · 102 (Medical) · 15400 (Snakebite/Rabies) · 1800-180-1104 (Poison Control)</p>
+          </div>
+        </div>
+      )}
+
+      {/* ── JA STORE TAB ── */}
+      {activeTab==="jastore" && (
+        <div style={{ padding:16 }}>
+          <div style={{ background:"linear-gradient(135deg,#065F46,#059669)", borderRadius:14, padding:"16px", color:"white", marginBottom:16 }}>
+            <div style={{ fontSize:20, fontWeight:800, marginBottom:4 }}>Jan Aushadhi Stores</div>
+            <div style={{ fontSize:13, opacity:0.85 }}>10,000+ stores across India · Official govt generic medicines</div>
+          </div>
+          <div style={{ background:"white", border:"1px solid #E5E7EB", borderRadius:14, overflow:"hidden", marginBottom:12 }}>
+            <div style={{ padding:"12px 14px", borderBottom:"1px solid #F3F4F6", background:"#F0FDF4" }}>
+              <div style={{ fontSize:11, fontWeight:700, color:"#065F46", textTransform:"uppercase", letterSpacing:"0.05em" }}>How to find nearest store</div>
+            </div>
+            {[["🌐 Website","janaushadhi.gov.in/StoreLocator","Official locator"],["📱 App","Jan Aushadhi Suvidha App","Play Store / App Store"],["📞 Helpline","1800-11-8181","Toll free, Mon–Sat"],["🗺 Google Maps","Search 'Jan Aushadhi near me'","Usually within 2km in cities"]].map(([icon,name,sub],i)=>(
+              <div key={i} style={{ display:"flex", gap:12, alignItems:"center", padding:"12px 14px", borderBottom:i<3?"1px solid #F3F4F6":"none" }}>
+                <span style={{ fontSize:20 }}>{icon}</span>
+                <div>
+                  <div style={{ fontSize:13, fontWeight:600, color:"#1F2937" }}>{name}</div>
+                  <div style={{ fontSize:11, color:"#6B7280" }}>{sub}</div>
+                </div>
+              </div>
+            ))}
+          </div>
+          <div style={{ background:"white", border:"1px solid #E5E7EB", borderRadius:14, overflow:"hidden" }}>
+            <div style={{ padding:"12px 14px", borderBottom:"1px solid #F3F4F6", background:"#F0FDF4" }}>
+              <div style={{ fontSize:11, fontWeight:700, color:"#065F46", textTransform:"uppercase", letterSpacing:"0.05em" }}>Sample savings this month</div>
+            </div>
+            {[["Metformin 500mg × 90 tabs","Branded ₹288","JA ₹56","81% saved"],["Telmisartan 40mg × 30 tabs","Branded ₹213","JA ₹22.50","89% saved"],["Atorvastatin 10mg × 30 tabs","Branded ₹285","JA ₹24.75","91% saved"],["Augmentin 625 × 6 tabs","Branded ₹223","JA ₹52.60","76% saved"]].map(([drug,brand,ja,save],i)=>(
+              <div key={i} style={{ padding:"10px 14px", borderBottom:i<3?"1px solid #F3F4F6":"none" }}>
+                <div style={{ display:"flex", justifyContent:"space-between", marginBottom:4 }}>
+                  <span style={{ fontSize:13, fontWeight:500, color:"#1F2937" }}>{drug}</span>
+                  <span style={{ fontSize:12, color:"#059669", fontWeight:700 }}>{save}</span>
+                </div>
+                <div style={{ display:"flex", gap:12 }}>
+                  <span style={{ fontSize:11, color:"#9CA3AF", textDecoration:"line-through" }}>{brand}</span>
+                  <span style={{ fontSize:11, color:"#059669", fontWeight:600 }}>{ja}</span>
+                </div>
+              </div>
+            ))}
+          </div>
+        </div>
+      )}
+
+      {/* ── FOOTER ── */}
+      <div style={{ background:"white", borderTop:"1px solid #F3F4F6", padding:"10px 16px", display:"flex", justifyContent:"space-between", alignItems:"center" }}>
+        <div style={{ fontSize:10, color:"#9CA3AF" }}>MedSaathi v1.0 · Gemma 4 E4B · {offlineMode?"Offline":"Online"} Mode</div>
+        <div style={{ fontSize:10, color:"#9CA3AF" }}>Not medical advice · Consult doctor</div>
+      </div>
+    </div>
+  );
+}
